@@ -22,6 +22,12 @@ import {
   buildTogetherModelDefinition,
 } from "./together-models.js";
 import { discoverVeniceModels, VENICE_BASE_URL } from "./venice-models.js";
+import {
+  resolveGcpProject,
+  resolveGcpLocation,
+  hasGcloudAdc,
+  buildVertexAnthropicProvider,
+} from "./vertex-anthropic-models.js";
 
 type ModelsConfig = NonNullable<OpenClawConfig["models"]>;
 export type ProviderConfig = NonNullable<ModelsConfig["providers"]>[string];
@@ -586,6 +592,16 @@ export async function resolveImplicitProviders(params: {
     resolveApiKeyFromProfiles({ provider: "qianfan", store: authStore });
   if (qianfanKey) {
     providers.qianfan = { ...buildQianfanProvider(), apiKey: qianfanKey };
+  }
+
+  // Vertex Anthropic provider - auto-discover if GCP credentials are available
+  const gcpProject = resolveGcpProject();
+  const gcpLocation = resolveGcpLocation();
+  if (gcpProject && gcpLocation && hasGcloudAdc()) {
+    providers["vertex-anthropic"] = {
+      ...buildVertexAnthropicProvider({ project: gcpProject, location: gcpLocation }),
+      apiKey: "gcloud-adc", // Placeholder; actual auth uses gcloud ADC
+    };
   }
 
   return providers;
